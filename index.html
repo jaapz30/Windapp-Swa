@@ -5,17 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SWA Windapp – Schokkerhaven</title>
 
-  <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <style>
-    :root{
+    :root {
       --brand: #E71C1F;
       --brand-dark: #000000;
       --bg: #f4f4f4;
       --font-head: "Inter", system-ui, Helvetica, Arial, sans-serif;
       --font-body: "Inter", system-ui, Helvetica, Arial, sans-serif;
     }
-    body{
+    body {
       font-family: var(--font-body);
       background: var(--bg);
     }
@@ -35,7 +34,7 @@
     <h2 class="font-semibold" style="color:var(--brand)">Huidig&nbsp;<span id="currTime" class="text-xs text-slate-500"></span></h2>
     <p class="text-2xl font-bold"><span id="currSpeed">–</span> kn</p>
     <p class="text-sm text-slate-600 uppercase tracking-widest" id="currDir">–</p>
-    <p class="text-sm text-slate-500" id="currGust">Windstoten: – kn</p>
+    <p class="text-sm text-red-600 font-medium" id="currGust">Windstoten: – kn</p>
   </section>
 
   <!-- Tabel – 8 uur forecast -->
@@ -72,13 +71,12 @@
     };
 
     const degToCard = d => {
-      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE",
-                    "S","SSW","SW","WSW","W","WNW","NW","NNW"];
-      return dirs[Math.round(d/22.5)%16];
+      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+      return dirs[Math.round(d / 22.5) % 16];
     };
     const fmtTime = s => s.slice(11, 16);
 
-    // Actuele wind van Marknesse via Weerlive
+    // Huidige wind via Weerlive
     fetch("https://weerlive.nl/api/weerlive_api_v2.php?key=320a946057&locatie=52.613,5.747")
       .then(r => {
         if (!r.ok) throw new Error("Fout bij ophalen van Weerlive-data");
@@ -90,7 +88,7 @@
         const richting = live.windr;
         const tijd = live.time;
         const windkmh = Number(live.windkmh);
-        const windstootKn = Math.round((windkmh + 10) * 0.53996); // schatting + omrekening
+        const windstootKn = Math.round((windkmh + 10) * 0.53996); // ruwe schatting
 
         document.getElementById('currSpeed').textContent = knopen;
         document.getElementById('currDir').textContent = richting;
@@ -99,15 +97,15 @@
       })
       .catch(e => showErr("❌ Actuele wind niet beschikbaar"));
 
-    // Forecast functie (Open-Meteo modellen)
+    // Forecast data per model
     const getFc = model =>
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_hours=${hours}&models=${model}&timezone=${tz}`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&forecast_hours=${hours}&models=${model}&timezone=${tz}`)
         .then(r => {
-          if (!r.ok) throw new Error('Forecast-data niet beschikbaar');
+          if (!r.ok) throw new Error("Forecast-data niet beschikbaar");
           return r.json();
         });
 
-    // Haal beide modellen tegelijk op
+    // Tabel vullen
     Promise.all([getFc(model1), getFc(model2)])
       .then(([f1, f2]) => {
         const times = f1.hourly.time;
@@ -115,16 +113,19 @@
 
         for (let i = 0; i < times.length; i++) {
           const t = document.createElement('div');
-          t.className = "py-1 border-b";
+          t.className = "py-1 border-b font-medium";
           t.textContent = fmtTime(times[i]);
           tbl.appendChild(t);
 
           [f1, f2].forEach(f => {
             const c = document.createElement('div');
-            c.className = "py-1 border-b";
+            c.className = "py-1 border-b leading-tight";
             const kn = Math.round(f.hourly.wind_speed_10m[i]);
+            const gust = Math.round(f.hourly.wind_gusts_10m[i]);
             const dir = degToCard(f.hourly.wind_direction_10m[i]);
-            c.innerHTML = `<span class="font-medium">${kn}</span><span class="text-[10px] ml-1 text-slate-500">${dir}</span>`;
+            c.innerHTML = `
+              <div><span class="font-semibold">${kn}</span> <span class="text-[10px] text-slate-500">${dir}</span></div>
+              <div class="text-[10px] text-red-600 font-medium">gust: ${gust}</div>`;
             tbl.appendChild(c);
           });
         }
