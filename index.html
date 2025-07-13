@@ -89,8 +89,8 @@
         const knopen = Math.round(Number(live.windknp));
         const richting = live.windr;
         const tijd = live.time;
-        const windstootKmh = Number(live.windkmh) + 10; // ruwe schatting
-        const windstootKn = Math.round(windstootKmh * 0.53996);
+        const windkmh = Number(live.windkmh);
+        const windstootKn = Math.round((windkmh + 10) * 0.53996); // schatting + omrekening
 
         document.getElementById('currSpeed').textContent = knopen;
         document.getElementById('currDir').textContent = richting;
